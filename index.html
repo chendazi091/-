@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>午後茶時光 Office Tea Break 🥤</title>
+  
+  <!-- Premium Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- React & Babel Standalone CDNs -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Tailwind CSS v3 CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Custom Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',      // Soft emerald mist
+              100: '#e2f5ec',     // Mint water
+              200: '#cbd5e1',     
+              500: '#10b981',     // Emerald-500
+              600: '#059669',     // Emerald-600
+              700: '#047857',     
+              800: '#065f46',     
+              900: '#0f172a',     // Slate-900 (Action Primary)
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            display: ['Outfit', '"Noto Sans TC"', 'sans-serif']
+          },
+          boxShadow: {
+            'premium': '0 4px 24px -2px rgba(15, 23, 42, 0.04), 0 2px 8px -1px rgba(0, 0, 0, 0.02)',
+            'hover': '0 12px 32px -4px rgba(16, 185, 129, 0.12), 0 4px 12px -2px rgba(16, 185, 129, 0.04)',
+            'fancy': '0 20px 40px -10px rgba(16, 185, 129, 0.15), 0 4px 12px -1px rgba(0, 0, 0, 0.02)',
+            'inner-soft': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.02)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Base Custom styles for transitions -->
+  <style type="text/css">
+    body {
+      background-color: #F8F9FA;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F8F9FA;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(16, 185, 129, 0.2);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(16, 185, 129, 0.4);
+    }
+
+    @keyframes wave {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .wave-float {
+      animation: wave 3s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.05); }
+    }
+    .animate-pulse-slow {
+      animation: pulse-slow 2200ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased text-slate-800 min-h-screen">
+
+  <!-- Setup mounting target container -->
+  <div id="root" class="h-full"></div>
+
+  <!-- React JSX Logic (parsed directly by Babel Standalone) -->
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // Hardcoded Endpoint from Google Apps Script Spreadsheet back-end
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzdiVTX7BP-BWoAbextsrKS5MsQ2ApACUFaY4KEHx97Bn95v9ggg8b0s9UQTK5s2hZB5g/exec';
+
+    // Premium default fallbacks in case API fails or suffers from CORS limitations
+    const FALLBACK_MENU = [
+      { name: "手作黑糖珍珠鮮奶", price: 65, category: "黑糖厚乳", description: "慢火熬煮手工黑糖與Q彈珍珠，搭配 100% 瑞穗鮮乳。" },
+      { name: "小農熟成錫蘭拿鐵", price: 60, category: "濃厚拿鐵", description: "精選莊園錫蘭紅茶，散發優雅麥香與成熟厚實奶香。" },
+      { name: "四季玉露春青茶", price: 35, category: "純粹原茶", description: "選自南投手採四季春，清香回甘，冷泡熱泡皆沁涼。" },
+      { name: "茉香翡翠鮮奶綠", price: 55, category: "濃厚拿鐵", description: "黃金綠茶慢薰茉莉，茶湯輕盈，牛奶絲滑柔順。" },
+      { name: "生榨翡翠檸檬綠", price: 50, category: "鮮果特調", description: "屏東九如新鮮檸檬現榨，酸香開胃，消暑解膩第一名。" },
+      { name: "盛夏完熟芒果青", price: 60, category: "鮮果特調", description: "完熟愛文芒果丁融入甘醇青茶，滿滿果肉雙重享受。" },
+      { name: "靜岡宇治抹茶凍鮮奶", price: 70, category: "春季限定", description: "特選靜岡抹茶特調，鋪上手作抹茶茶凍，多層次茶香。" },
+      { name: "炭焙凍頂金萱烏龍", price: 40, category: "純粹原茶", description: "中烘焙高山茶，茶湯澄亮，帶有淡雅天然奶香與岩韻。" }
+    ];
+
+    const SUGAR_OPTIONS = ['正常糖', '七分糖', '半糖', '微糖', '無糖'];
+    const ICE_OPTIONS = ['正常冰', '少冰', '微冰', '去冰', '溫熱'];
+
+    // Helper to extract drink subcategories
+    const getCategoryForDrink = (drink) => {
+      if (drink.category) return drink.category;
+      const name = drink.name;
+      if (name.includes('鮮奶') || name.includes('拿鐵') || name.includes('厚乳') || name.includes('牛奶') || name.includes('乳')) return '鮮奶茶類';
+      if (name.includes('奶')) return '濃厚奶茶';
+      if (name.includes('茶') || name.includes('綠') || name.includes('青') || name.includes('金萱') || name.includes('烏龍') || name.includes('紅')) return '純粹原茶';
+      if (name.includes('果') || name.includes('檬') || name.includes('橘') || name.includes('梅') || name.includes('百香') || name.includes('柚')) return '鮮果特調';
+      return '招牌特推薦';
+    };
+
+    // Vector Icons dictionary from Lucide pack
+    const Icons = {
+      Cup: () => (
+        <svg className="w-5 h-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 14v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m10 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v5m10 0h2a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2v2H9V5z" />
+        </svg>
+      ),
+      Coins: () => (
+        <svg className="w-5 h-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      Users: () => (
+        <svg className="w-5 h-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
+      Trending: () => (
+        <svg className="w-5 h-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-9 9-4-4-6 6" />
+        </svg>
+      ),
+      Edit: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
+      Trash: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      ),
+      Search: () => (
+        <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      ),
+      Refresh: ({ className = "w-4 h-4 inline-block" }) => (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15H18" />
+        </svg>
+      ),
+      Plus: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+      ),
+      Minus: () => (
+        <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
+        </svg>
+      ),
+      UserCircle: () => (
+        <svg className="w-4 h-4 text-slate-400 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      Sparkles: () => (
+        <svg className="w-5 h-5 text-emerald-400 animate-pulse inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        </svg>
+      )
+    };
+
+    // --- OrderForm Component matching Clean Utility Theme ---
+    const OrderForm = ({ menu, onSubmit, editOrder, onCancelEdit, isSubmitLoading }) => {
+      const [name, setName] = useState('');
+      const [selectedDrinkName, setSelectedDrinkName] = useState('');
+      const [sugar, setSugar] = useState('半糖');
+      const [ice, setIce] = useState('少冰');
+      const [quantity, setQuantity] = useState(1);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [activeCategory, setActiveCategory] = useState('全部');
+      const [formError, setFormError] = useState('');
+
+      // When editor targets action
+      useEffect(() => {
+        if (editOrder) {
+          setName(editOrder.name);
+          setSelectedDrinkName(editOrder.drink);
+          setSugar(editOrder.sugar);
+          setIce(editOrder.ice);
+          setQuantity(editOrder.quantity);
+          setFormError('');
+        }
+      }, [editOrder]);
+
+      const handleCancel = () => {
+        onCancelEdit();
+        setSelectedDrinkName('');
+        setSugar('半糖');
+        setIce('少冰');
+        setQuantity(1);
+        setFormError('');
+      };
+
+      // Categories setup
+      const categories = useMemo(() => {
+        const unique = new Set();
+        unique.add('全部');
+        menu.forEach(d => {
+          unique.add(getCategoryForDrink(d));
+        });
+        return Array.from(unique);
+      }, [menu]);
+
+      // Filter tea menu list
+      const filteredMenu = useMemo(() => {
+        return menu.filter(item => {
+          const cat = getCategoryForDrink(item);
+          const categoryMatch = activeCategory === '全部' || cat === activeCategory;
+          const queryMatch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                             (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
+          return categoryMatch && queryMatch;
+        });
+      }, [menu, activeCategory, searchQuery]);
+
+      const currentDrink = useMemo(() => {
+        return menu.find(d => d.name === selectedDrinkName);
+      }, [menu, selectedDrinkName]);
+
+      const itemPrice = currentDrink ? currentDrink.price : 0;
+      const totalPrice = itemPrice * quantity;
+
+      const handleFormSubmit = (e) => {
+        e.preventDefault();
+        setFormError('');
+
+        if (!name.trim()) {
+          setFormError('請輸入訂購人姓名 ✍️');
+          return;
+        }
+        if (!selectedDrinkName) {
+          setFormError('請挑選一杯美味飲品 🥤');
+          return;
+        }
+        if (quantity < 1 || quantity > 99) {
+          setFormError('數量必須在 1 到 99 之間喔！');
+          return;
+        }
+
+        onSubmit({
+          name: name.trim(),
+          drink: selectedDrinkName,
+          sugar,
+          ice,
+          quantity,
+          totalPrice,
+          ...(editOrder ? { orderId: editOrder.orderId } : {})
+        });
+
+        // Soft-clean state except ordering identity for quick continuous bookings
+        setSelectedDrinkName('');
+        setSugar('半糖');
+        setIce('少冰');
+        setQuantity(1);
+      };
+
+      return (
+        <section className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-6 md:p-8 flex flex-col" id="order-form-container">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <span className={`w-1.5 h-6 rounded-full ${editOrder ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+              {editOrder ? '編輯點單項目' : '新增點單項目'}
+            </h2>
+            {editOrder && (
+              <button 
+                type="button" 
+                onClick={handleCancel}
+                className="text-xs font-bold text-slate-400 hover:text-slate-600 border border-slate-200/60 rounded-lg px-2.5 py-1"
+              >
+                取消修改
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-6 flex-1">
+            
+            {/* Person Box */}
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">訂購人姓名</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="請輸入姓名 (如: 小明)" 
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none placeholder:text-slate-300 font-medium transition-all text-slate-800"
+                />
+              </div>
+            </div>
+
+            {/* Menu catalog */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">選擇飲品 (MENU)</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="搜尋名稱/描述..."
+                    className="bg-slate-50 border-none rounded-lg py-1 px-3 pl-8 text-xs focus:ring-2 focus:ring-emerald-500/20 outline-none w-36 sm:w-44 text-slate-700"
+                  />
+                  <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none">
+                    <Icons.Search />
+                  </span>
+                </div>
+              </div>
+
+              {/* Categorization controls */}
+              <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-none text-xs">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all font-bold ${
+                      activeCategory === cat 
+                        ? 'bg-slate-900 text-white' 
+                        : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* Grid lists with selection */}
+              <div className="mt-2 border border-slate-100 rounded-xl overflow-hidden bg-slate-50/50">
+                <div className="max-h-[200px] overflow-y-auto p-2 space-y-1.5">
+                  {filteredMenu.length > 0 ? (
+                    filteredMenu.map((item) => {
+                      const isSelected = selectedDrinkName === item.name;
+                      return (
+                        <div
+                          key={item.name}
+                          onClick={() => setSelectedDrinkName(item.name)}
+                          className={`p-3 rounded-xl border border-transparent transition-all duration-200 cursor-pointer flex justify-between items-center ${
+                            isSelected 
+                              ? 'bg-emerald-50 text-emerald-900 border-emerald-200' 
+                              : 'bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="text-left flex-1 pr-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-800 text-sm">{item.name}</span>
+                              <span className="text-[10px] bg-slate-100 text-slate-400 px-1.5 py-0.2 rounded font-medium">{getCategoryForDrink(item)}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1 italic font-medium">{item.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-sm font-bold font-mono text-slate-800">${item.price}</span>
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                              isSelected ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300'
+                            }`}>
+                              {isSelected && <svg className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="text-center py-6 text-slate-300 text-xs font-semibold">
+                      找不到相匹配的特色茶飲
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sugars adjusting */}
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">甜度調整</label>
+              <div className="grid grid-cols-5 gap-1.5">
+                {SUGAR_OPTIONS.map((opt) => {
+                  const isActive = sugar === opt;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setSugar(opt)}
+                      className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                        isActive 
+                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
+                          : 'border border-slate-100 text-slate-400 hover:bg-slate-50 bg-white'
+                      }`}
+                    >
+                      {opt.replace('糖', '')}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Ice adjusting */}
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">冰塊調整</label>
+              <div className="grid grid-cols-5 gap-1.5">
+                {ICE_OPTIONS.map((opt) => {
+                  const isActive = ice === opt;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setIce(opt)}
+                      className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                        isActive 
+                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
+                          : 'border border-slate-100 text-slate-400 hover:bg-slate-50 bg-white'
+                      }`}
+                    >
+                      {opt.replace('冰', '').replace('熱', '常溫')}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Quantity Controller & Price display */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">訂購數量</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(q => q > 1 ? q - 1 : 1)}
+                    className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-200 cursor-pointer select-none"
+                  >
+                    -
+                  </button>
+                  <span className="text-xl font-bold font-mono w-6 text-center">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(q => q < 99 ? q + 1 : 99)}
+                    className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-200 cursor-pointer select-none"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-slate-400 uppercase mb-1">小計</p>
+                <p className="text-2xl font-bold font-mono text-slate-900">$ {totalPrice}</p>
+              </div>
+            </div>
+
+            {formError && (
+              <div className="p-3 bg-red-50 rounded-xl text-xs text-red-600 font-bold">
+                {formError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitLoading}
+              className={`w-full py-4 mt-4 text-white rounded-2xl font-bold text-lg hover:shadow-xl hover:shadow-slate-300 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${
+                isSubmitLoading ? 'bg-slate-300' : editOrder ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-900 hover:bg-slate-800'
+              }`}
+            >
+              {isSubmitLoading ? (
+                <span className="flex items-center gap-2">
+                  <Icons.Refresh className="animate-spin w-5 h-5 text-white" />
+                  發送請求中...
+                </span>
+              ) : editOrder ? (
+                '確認修改訂單內容'
+              ) : (
+                '確認送出點單項目'
+              )}
+            </button>
+
+          </div>
+        </section>
+      );
+    };
+
+    // --- OrderList Component matching Clean Utility Theme ---
+    const OrderList = ({ orders, onEdit, onDelete, isOfflineMode, copyAllOrdersText }) => {
+      const [filterQuery, setFilterQuery] = useState('');
+
+      const filteredOrders = useMemo(() => {
+        return orders.filter(o => 
+          o.name.toLowerCase().includes(filterQuery.toLowerCase()) || 
+          o.drink.toLowerCase().includes(filterQuery.toLowerCase())
+        );
+      }, [orders, filterQuery]);
+
+      return (
+        <section className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col flex-1 overflow-hidden">
+          <div className="p-8 border-b border-slate-50 flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white">
+            <div className="text-left">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <span className="w-1.5 h-6 bg-slate-900 rounded-full"></span>
+                當日訂單明細
+              </h2>
+              <p className="text-xs text-slate-400 font-medium mt-1">目前已成功登記：{orders.length} 筆項目</p>
+            </div>
+
+            <div className="flex gap-2.5 items-center justify-between sm:justify-end">
+              {orders.length > 0 && (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={filterQuery}
+                    onChange={(e) => setFilterQuery(e.target.value)}
+                    placeholder="搜尋訂單細節..."
+                    className="bg-slate-50 border-none rounded-lg py-1 px-3 py-1.5 pl-8 text-xs focus:ring-2 focus:ring-emerald-500/20 outline-none w-36 sm:w-44 text-slate-700 font-medium"
+                  />
+                  <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none">
+                    <Icons.Search />
+                  </span>
+                </div>
+              )}
+              <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full ${isOfflineMode ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}`}>
+                {isOfflineMode ? '離線緩衝模式' : '自動雲端同步'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 min-h-[350px]">
+            {orders.length === 0 ? (
+              <div className="py-24 px-4 text-center">
+                <div className="wave-float inline-block bg-slate-50 p-6 rounded-full text-slate-300 mb-4 border border-dashed border-slate-200">
+                  <Icons.Cup className="w-10 h-10" />
+                </div>
+                <h4 className="font-bold text-slate-700 text-base mb-1">今日目前尚無同仁訂購</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                  大夥都在等你起頭呢！快從左方的表單挑選喜愛的飲料，點擊送出即可完成登記，開啟美好的午後充電茶時光。☕️
+                </p>
+              </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 text-xs font-bold">
+                查無符合「{filterQuery}」的點單紀錄
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                
+                {/* Desktop view Table matches mockup */}
+                <table className="w-full text-left hidden md:table">
+                  <thead>
+                    <tr class="text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50">
+                      <th className="px-4 pb-4">訂購人</th>
+                      <th className="px-4 pb-4">飲品項目</th>
+                      <th className="px-4 pb-4">甜度冰塊</th>
+                      <th className="px-4 pb-4 text-center">數量</th>
+                      <th className="px-4 pb-4 text-right">金額</th>
+                      <th className="px-4 pb-4 text-right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 font-medium text-sm">
+                    {filteredOrders.map((o, idx) => (
+                      <tr key={o.orderId || idx} className="group hover:bg-slate-50/70 transition-all">
+                        <td className="p-4 text-slate-900 font-bold">{o.name}</td>
+                        <td className="p-4 text-slate-800 font-semibold">{o.drink}</td>
+                        <td className="p-4">
+                          <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded font-bold">
+                            {o.sugar} / {o.ice}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center font-mono font-bold text-slate-700">{o.quantity}</td>
+                        <td className="p-4 text-right font-mono font-bold text-slate-900">${o.totalPrice}</td>
+                        <td className="p-4 text-right">
+                          <button 
+                            onClick={() => onEdit(o)}
+                            className="text-slate-300 hover:text-emerald-600 mr-3 cursor-pointer text-xs font-bold transition-all"
+                          >
+                            編輯
+                          </button>
+                          <button 
+                            onClick={() => onDelete(o.orderId)}
+                            className="text-slate-300 hover:text-red-500 cursor-pointer text-xs font-bold transition-all"
+                          >
+                            刪除
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Mobile view responsive block listing */}
+                <div className="space-y-3.5 md:hidden">
+                  {filteredOrders.map((o, idx) => (
+                    <div key={o.orderId || idx} className="p-4 rounded-2xl border border-slate-100 bg-white shadow-premium flex flex-col gap-3">
+                      <div className="flex justify-between items-start">
+                        <div className="text-left">
+                          <span className="text-xs font-bold text-slate-400 block uppercase">訂購人</span>
+                          <span className="font-bold text-slate-800 text-sm">{o.name}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => onEdit(o)}
+                            className="px-2.5 py-1 rounded bg-slate-50 text-slate-500 hover:text-emerald-600 transition-all font-bold text-[11px] cursor-pointer"
+                          >
+                            編輯
+                          </button>
+                          <button 
+                            onClick={() => onDelete(o.orderId)}
+                            className="px-2.5 py-1 rounded bg-slate-50 text-slate-500 hover:text-red-500 transition-all font-bold text-[11px] cursor-pointer"
+                          >
+                            刪除
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-left py-2 border-y border-slate-50">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 block uppercase">飲品項目</span>
+                          <span className="font-bold text-slate-700 text-xs">{o.drink}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-bold text-slate-400 block uppercase">調配習慣</span>
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
+                            {o.sugar}/{o.ice}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center bg-slate-50/55 p-2 rounded-xl">
+                        <div className="text-left">
+                          <span className="text-[10px] font-semibold text-slate-400 inline-block">杯數：</span>
+                          <span className="font-bold font-mono text-slate-700 text-xs">{o.quantity} 杯</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-semibold text-slate-400 inline-block">費用：</span>
+                          <span className="font-extrabold text-slate-900 text-sm font-mono">${o.totalPrice}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            )}
+          </div>
+
+          {/* Copyable Slopes footer block matching style */}
+          <div className="p-8 bg-slate-900 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 rounded-b-[2rem]">
+            <div className="flex gap-6 items-center text-left">
+              <div>
+                <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">今日菜單來源</span>
+                <span className="text-sm font-medium">GAS Google Sheets 活頁簿</span>
+              </div>
+              <div className="h-8 w-px bg-slate-700 hidden sm:block"></div>
+              <div>
+                <span className="block text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">對接通訊端</span>
+                <span className="text-sm font-medium">Google Apps Script</span>
+              </div>
+            </div>
+            <button 
+              type="button"
+              onClick={copyAllOrdersText}
+              className="w-full md:w-auto px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-emerald-950/40 cursor-pointer hover:scale-[1.02] active:scale-95 transition-all text-center"
+            >
+              複製所有訂單內容
+            </button>
+          </div>
+        </section>
+      );
+    };
+
+    // --- Main Integrated App Container with "Clean Utility / Minimal" ---
+    function App() {
+      const [menu, setMenu] = useState(FALLBACK_MENU);
+      const [orders, setOrders] = useState([]);
+      const [isLoading, setIsLoading] = useState(true);
+      const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+      const [isOfflineMode, setIsOfflineMode] = useState(false);
+      const [editOrder, setEditOrder] = useState(null);
+      const [apiLogs, setApiLogs] = useState([]);
+      const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+      // Live Greeting tracker based on local Taipei timing
+      const taiwanGreeting = useMemo(() => {
+        const utc = new Date();
+        const local = new Date(utc.getTime() + (8 * 60 * 60 * 1000));
+        const hour = local.getUTCHours();
+        
+        if (hour >= 5 && hour < 11) {
+          return {
+            text: "晨曦早點，來杯手調咖啡、溫潤紅茶給一整天滿滿能量！☕️",
+            gradient: "text-emerald-600"
+          };
+        } else if (hour >= 11 && hour < 14) {
+          return {
+            text: "午餐解膩！來杯純粹原茶金萱烏龍，讓嘴巴呼吸呼吸。🥤",
+            gradient: "text-emerald-600"
+          };
+        } else if (hour >= 14 && hour < 17) {
+          return {
+            text: "三點一刻下午茶，點杯甜甜的珍珠鮮奶，慰勞辛苦努力的自己！✨",
+            gradient: "text-emerald-600"
+          };
+        } else {
+          return {
+            text: "加班辛苦了！沏杯無咖啡因溫熱果茶，放鬆沉澱繃緊的思緒。🍵",
+            gradient: "text-emerald-600"
+          };
+        }
+      }, [orders]);
+
+      // Logging audit helper
+      const addLog = (msg, type = 'info') => {
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setApiLogs(prev => [{ time, msg, type }, ...prev].slice(0, 5));
+      };
+
+      const showToast = (message, type = 'success') => {
+        setToast({ show: true, message, type });
+      };
+
+      const handleCloseToast = () => {
+        setToast({ show: false, message: '', type: 'success' });
+      };
+
+      // Auto close toasts
+      useEffect(() => {
+        if (toast.show) {
+          const timer = setTimeout(() => {
+            setToast({ show: false, message: '', type: 'success' });
+          }, 4000);
+          return () => clearTimeout(timer);
+        }
+      }, [toast.show]);
+
+      // Fetch dynamic menu database
+      const loadDrinkDatabase = async (showSuccessToast = false) => {
+        setIsLoading(true);
+        addLog('正在連線 Google 雲端庫讀取菜單與訂單...', 'info');
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s safety abort
+
+          const response = await fetch(API_URL, { signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`伺服器傳回錯誤編號: ${response.status}`);
+          }
+
+          const data = await response.json();
+          addLog('雲端同步成功！已獲取最新飲品與訂單。', 'success');
+
+          if (data.menu && data.menu.length > 0) {
+            setMenu(data.menu);
+          }
+          if (data.orders) {
+            setOrders(data.orders);
+            localStorage.setItem('cached_gas_orders', JSON.stringify(data.orders));
+          }
+
+          setIsOfflineMode(false);
+          if (showSuccessToast) showToast('已成功同步雲端最新數據！', 'success');
+        } catch (error) {
+          console.warn('Apps Script fetch failed:', error);
+          addLog(`連線受限 (${error.message})，自動啟用「離線本地暫存」保障運作。`, 'warning');
+          setIsOfflineMode(true);
+          
+          const localData = localStorage.getItem('local_orders');
+          if (localData) {
+            setOrders(JSON.parse(localData));
+          } else {
+            const fallbackCached = localStorage.getItem('cached_gas_orders');
+            if (fallbackCached) {
+              setOrders(JSON.parse(fallbackCached));
+            } else {
+              setOrders([]);
+            }
+          }
+          showToast('已切換至離線對話模式，依舊能在本機儲存與運算！', 'info');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      // Bootstrap load
+      useEffect(() => {
+        loadDrinkDatabase();
+      }, []);
+
+      // Submit creation or updates
+      const handleCommitOrder = async (orderData) => {
+        setIsSubmitLoading(true);
+
+        if (isOfflineMode) {
+          setTimeout(() => {
+            let updatedOrders = [...orders];
+            
+            if (orderData.orderId) {
+              updatedOrders = updatedOrders.map(o => o.orderId === orderData.orderId ? {
+                ...o,
+                ...orderData,
+                timestamp: o.timestamp || new Date().toLocaleString()
+              } : o);
+              showToast('訂單已順利於本地更新儲存！', 'success');
+              addLog(`修改本地項目: ${orderData.name} - ${orderData.drink}`, 'success');
+            } else {
+              const mockOrder = {
+                ...orderData,
+                orderId: 'offline-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+                timestamp: new Date().toLocaleTimeString()
+              };
+              updatedOrders.unshift(mockOrder);
+              showToast('飲料訂餐已順利登錄至本機緩存中。', 'success');
+              addLog(`新增本地項目: ${orderData.name} - ${orderData.drink}`, 'success');
+            }
+
+            setOrders(updatedOrders);
+            localStorage.setItem('local_orders', JSON.stringify(updatedOrders));
+            setEditOrder(null);
+            setIsSubmitLoading(false);
+          }, 350);
+          return;
+        }
+
+        const isEdit = !!orderData.orderId;
+        const action = isEdit ? 'update' : 'create';
+        const payload = {
+          action,
+          data: orderData
+        };
+
+        addLog(`正在傳送訂單 ${action} 請求至雲端...`, 'info');
+
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          addLog('雲端回報處理完成，正重新對齊名單...', 'success');
+          showToast(isEdit ? '訂單已順利在雲端修改對齊！' : '您的這杯飲料已順利排入雲端揪團！', 'success');
+          setEditOrder(null);
+          await loadDrinkDatabase();
+        } catch (error) {
+          console.error('GAS POST error:', error);
+          addLog(`同送出傳輸失敗: ${error.message}，先將當前數值轉寄至微緩存。`, 'warning');
+          
+          let updatedOrders = [...orders];
+          if (orderData.orderId) {
+            updatedOrders = updatedOrders.map(o => o.orderId === orderData.orderId ? {
+              ...o,
+              ...orderData
+            } : o);
+          } else {
+            const mock = {
+              ...orderData,
+              orderId: 'offline-' + Date.now(),
+              timestamp: new Date().toLocaleTimeString()
+            };
+            updatedOrders.unshift(mock);
+          }
+          setOrders(updatedOrders);
+          localStorage.setItem('local_orders', JSON.stringify(updatedOrders));
+          
+          setIsOfflineMode(true);
+          setEditOrder(null);
+          showToast('雲端發送失敗，飲料已先妥當鎖定在本機暫存中。', 'warning');
+        } finally {
+          setIsSubmitLoading(false);
+        }
+      };
+
+      // Delete action handling
+      const handleDeleteOrder = async (orderId) => {
+        const check = window.confirm ? window.confirm('確定要自今日下午茶名單中刪除這杯好喝的飲料嗎？🥺') : true;
+        if (!check) return;
+
+        setIsLoading(true);
+
+        if (isOfflineMode) {
+          setTimeout(() => {
+            const next = orders.filter(o => o.orderId !== orderId);
+            setOrders(next);
+            localStorage.setItem('local_orders', JSON.stringify(next));
+            showToast('已取消該筆本地訂單項目。', 'info');
+            addLog(`已在本機刪除點單：${orderId}`, 'info');
+            setIsLoading(false);
+          }, 300);
+          return;
+        }
+
+        addLog(`正在傳送訂單刪除要求 (${orderId}) 到雲端中...`, 'info');
+
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'delete',
+              data: { orderId }
+            })
+          });
+
+          addLog('雲端刪除成功！配合異動重新計算名單。', 'success');
+          showToast('已安全從雲端名冊中移除此杯飲料！', 'success');
+          await loadDrinkDatabase();
+        } catch (error) {
+          console.error(error);
+          addLog(`刪除要求遭遇到網路阻礙，採用本地強行卸除。`, 'warning');
+          const next = orders.filter(o => o.orderId !== orderId);
+          setOrders(next);
+          localStorage.setItem('local_orders', JSON.stringify(next));
+          showToast('本地移除該訂單成功。', 'info');
+          setIsLoading(false);
+        }
+      };
+
+      const handleTriggerEdit = (orderItem) => {
+        setEditOrder(orderItem);
+        showToast(`已成功載入 ${orderItem.name} 點購的 ${orderItem.drink}！`, 'success');
+        
+        const formEl = document.getElementById('order-form-container');
+        if (formEl) {
+          formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      };
+
+      const toggleManualMode = () => {
+        const nextMode = !isOfflineMode;
+        setIsOfflineMode(nextMode);
+        addLog(`調配連線，更改為：${nextMode ? '「本機獨立運算模式」' : '「Google apps script 多人連動模式」'}`, 'info');
+        showToast(nextMode ? '進入離線自主測試！您可以增刪修改隨心試算。' : '開始搜尋雲端伺服器對齊狀態...', 'success');
+        
+        if (!nextMode) {
+          loadDrinkDatabase();
+        } else {
+          const cached = localStorage.getItem('local_orders') || localStorage.getItem('cached_gas_orders');
+          if (cached) setOrders(JSON.parse(cached));
+        }
+      };
+
+      const handleFlushLocalCache = () => {
+        if (window.confirm && window.confirm('確定要安全排除瀏覽器離線快取中的累進訂單嗎？（不影響試算表雲端對齊份額）')) {
+          localStorage.removeItem('local_orders');
+          setOrders([]);
+          showToast('本地暫存快取已安全排除清空。', 'success');
+          addLog('手動抹除本地暫存資料集。', 'warning');
+        }
+      };
+
+      // Slack & Line formatted copy-out helper aligned with minimal mockup
+      const copyAllOrdersText = () => {
+        if (orders.length === 0) {
+          showToast('目前尚無人訂餐，無法複製喔。🌟', 'warning');
+          return;
+        }
+        
+        const lineBreak = "--------------------------------------";
+        const groupDetails = orders.map((o, idx) => {
+          return `${idx + 1}. 【${o.name}】 ${o.drink} (${o.sugar}/${o.ice}) x ${o.quantity}杯 = NT$${o.totalPrice}`;
+        }).join("\n");
+
+        const sumCups = orders.reduce((sum, o) => sum + parseInt(o.quantity || 1), 0);
+        const sumCost = orders.reduce((sum, o) => sum + parseFloat(o.totalPrice || 0), 0);
+
+        const clipboardText = `🥤 午後茶時光 辦公室團購訂單明細 🥤\n登記日期：${new Date().toLocaleDateString()}\n${lineBreak}\n${groupDetails}\n${lineBreak}\n總杯數：${sumCups} 杯\n預估總費用：NT$ ${sumCost} 元\n感謝揪團委員熱情服務！❤️`;
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(clipboardText).then(() => {
+            showToast('點單詳情已成功複製至剪貼簿！方便快速轉寄 LINE 群組 📋', 'success');
+          }).catch(err => {
+            console.error(err);
+            showToast('瀏覽器限制剪貼權限，請嘗試選定文字進行手動拖拉。', 'warning');
+          });
+        } else {
+          showToast('不支援直接複製，建議手動拖選表單文字複製喔。', 'warning');
+        }
+      };
+
+      // Statistics calculations
+      const dynamicStats = useMemo(() => {
+        const cupsCount = orders.reduce((sum, o) => sum + parseInt(o.quantity || 1), 0);
+        const amountSum = orders.reduce((sum, o) => sum + parseFloat(o.totalPrice || 0), 0);
+        const dynamicPeople = new Set(orders.map(o => o.name)).size;
+
+        const countMap = {};
+        orders.forEach(o => { countMap[o.drink] = (countMap[o.drink] || 0) + parseInt(o.quantity); });
+        
+        let hotDrink = '無';
+        let hotQty = 0;
+        Object.entries(countMap).forEach(([dkName, cnt]) => {
+          if (cnt > hotQty) {
+            hotQty = cnt;
+            hotDrink = dkName;
+          }
+        });
+
+        return { cupsCount, amountSum, dynamicPeople, hotDrink, hotQty };
+      }, [orders]);
+
+      return (
+        <div className="w-full max-w-7xl mx-auto flex flex-col font-sans text-slate-800 overflow-x-hidden md:p-8 min-h-screen justify-between">
+          
+          <div className="space-y-8">
+            
+            {/* Header Section styled after Clean Utility Theme */}
+            <header className="h-auto md:h-24 bg-white border-b border-slate-200 px-6 md:px-10 py-5 md:py-0 flex flex-col md:flex-row items-center justify-between gap-4 shrink-0 rounded-2xl md:rounded-[2rem] shadow-premium">
+              <div className="flex items-center gap-4 text-left w-full md:w-auto">
+                <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200 shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.5 5L12 11l-6.5-6M12 11v11" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900">午後茶時光 <span className="text-emerald-600 font-display">Office Tea</span></h1>
+                  <p className="text-xs md:text-sm text-slate-500 font-medium">
+                    今日點單統計 • 辦公室下午茶揪團系統
+                  </p>
+                </div>
+              </div>
+
+              {/* Connected widgets & headers */}
+              <div className="flex flex-wrap md:flex-nowrap items-center gap-6 md:gap-8 justify-between md:justify-end w-full md:w-auto pt-3 md:pt-0 border-t md:border-0 border-slate-100">
+                <div className="text-right">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-0.5">總杯數</p>
+                  <p className="text-xl font-mono font-bold text-slate-800">
+                    {dynamicStats.cupsCount} <span className="text-xs font-sans text-slate-400">Cups</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-0.5">今日估額</p>
+                  <p className="text-xl font-mono font-bold text-emerald-600 underline underline-offset-4">
+                    $ {dynamicStats.amountSum}
+                  </p>
+                </div>
+                
+                {/* Cloud pulse connected status bar */}
+                <div 
+                  onClick={toggleManualMode}
+                  title="點選切換網路測試模式"
+                  className="flex items-center ml-2 pl-4 border-l border-slate-100 cursor-pointer select-none"
+                >
+                  <div className={`w-3 h-3 rounded-full animate-pulse mr-2.5 ${isOfflineMode ? 'bg-amber-400' : 'bg-emerald-500'}`}></div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    {isOfflineMode ? 'LOCAL BUFFER' : 'API CONNECTED'}
+                  </span>
+                </div>
+
+                {/* Pull updates button */}
+                <button
+                  onClick={() => loadDrinkDatabase(true)}
+                  disabled={isLoading}
+                  className="p-2 border border-slate-200/80 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition"
+                  title="手動與雲端 Google 試算表對齊更新"
+                >
+                  <Icons.Refresh className={`w-4 h-4 text-emerald-600 inline-block ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </header>
+
+            {/* Smart Taiwan greetings banner */}
+            <div className="bg-emerald-50/40 border border-dashed border-emerald-200/50 p-4 rounded-2xl text-left flex items-start sm:items-center gap-3">
+              <span className="text-base leading-none shrink-0">💡</span>
+              <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                <span className={`font-bold mr-1 ${taiwanGreeting.gradient}`}>貼心叮嚀</span>
+                ：{taiwanGreeting.text}
+              </p>
+            </div>
+
+            {/* Core workspace grid */}
+            <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              
+              {/* Form panel container (5 cols) */}
+              <div className="lg:col-span-5 w-full h-full">
+                <OrderForm 
+                  menu={menu}
+                  onSubmit={handleCommitOrder}
+                  editOrder={editOrder}
+                  onCancelEdit={() => setEditOrder(null)}
+                  isSubmitLoading={isSubmitLoading}
+                />
+              </div>
+
+              {/* List details dashboard (7 cols) */}
+              <div className="lg:col-span-7 space-y-6 w-full">
+                
+                {/* Visual statistics cards block */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  
+                  {/* Cards 1 */}
+                  <div className="bg-white p-4.5 rounded-2xl border border-slate-100 shadow-premium text-left flex items-center gap-3">
+                    <div className="text-emerald-500 bg-emerald-50 rounded-xl p-2.5">
+                      <Icons.Cup />
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase">總杯數</span>
+                      <span className="text-base font-extrabold text-slate-800 font-mono">{dynamicStats.cupsCount} 杯</span>
+                    </div>
+                  </div>
+
+                  {/* Cards 2 */}
+                  <div className="bg-white p-4.5 rounded-2xl border border-slate-100 shadow-premium text-left flex items-center gap-3">
+                    <div className="text-emerald-600 bg-emerald-50 rounded-xl p-2.5">
+                      <Icons.Coins />
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase">團統計</span>
+                      <span className="text-base font-extrabold text-slate-900 font-mono">${dynamicStats.amountSum}</span>
+                    </div>
+                  </div>
+
+                  {/* Cards 3 */}
+                  <div className="bg-white p-4.5 rounded-2xl border border-slate-100 shadow-premium text-left flex items-center gap-3">
+                    <div className="text-emerald-500 bg-emerald-50 rounded-xl p-2.5">
+                      <Icons.Users />
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase">人數</span>
+                      <span className="text-base font-extrabold text-slate-800 font-mono">{dynamicStats.dynamicPeople} 人</span>
+                    </div>
+                  </div>
+
+                  {/* Cards 4 */}
+                  <div className="bg-white p-4.5 rounded-2xl border border-slate-100 shadow-premium text-left flex items-center gap-3 overflow-hidden w-full">
+                    <div className="text-emerald-600 bg-emerald-50 rounded-xl p-2.5">
+                      <Icons.Trending />
+                    </div>
+                    <div className="overflow-hidden w-full">
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase">排行最夯</span>
+                      <span className="text-xs font-bold text-slate-800 block truncate" title={dynamicStats.hotDrink}>
+                        {dynamicStats.hotDrink}
+                      </span>
+                    </div>
+                  </div>
+
+                </div>
+
+                {isLoading && (
+                  <div className="p-3 bg-emerald-50/50 border border-emerald-100/60 rounded-xl flex items-center justify-center gap-2 text-xs text-emerald-800 font-bold animate-pulse text-left">
+                    <Icons.Refresh className="w-4 h-4 animate-spin text-emerald-600 shrink-0" />
+                    <span>正連對讀取 Google 雲端活頁簿，同步即時訂餐，請稍後...</span>
+                  </div>
+                )}
+
+                <OrderList 
+                  orders={orders}
+                  onEdit={handleTriggerEdit}
+                  onDelete={handleDeleteOrder}
+                  isOfflineMode={isOfflineMode}
+                  copyAllOrdersText={copyAllOrdersText}
+                />
+
+              </div>
+
+            </main>
+
+            {/* Diagnostic tracker card */}
+            <footer className="mt-10 border-t border-slate-200/60 pt-6">
+              <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-premium flex flex-col md:flex-row items-start justify-between gap-5 text-left">
+                <div className="max-w-xl space-y-1">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    Google apps script 資料通道診斷與回報
+                  </h4>
+                  <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                    本系統串接了對稱之 Google 試算表 API，若遭遇嚴格之跨網域預檢、防禦或離線阻斷，會自動啟動即時微緩存，本機直接試算不遺漏，保障不影響您的茶點揪團！
+                  </p>
+                  {isOfflineMode && orders.length > 0 && (
+                    <div className="pt-2">
+                      <button 
+                        onClick={handleFlushLocalCache}
+                        className="text-[10px] font-bold bg-rose-50 hover:bg-rose-100/50 text-rose-600 border border-rose-100 rounded-lg px-2.5 py-1.5 transition cursor-pointer"
+                        title="清空本地所有暫存"
+                      >
+                        清空暫存數據
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="w-full md:w-auto text-left">
+                  <span className="text-[10px] font-bold text-slate-400 block mb-1">最近連線狀態追蹤</span>
+                  <div className="space-y-1 max-h-24 overflow-y-auto text-[10px] font-mono pr-1 min-w-[200px]">
+                    {apiLogs.length > 0 ? (
+                      apiLogs.map((log, i) => (
+                        <div key={i} className={`flex items-start gap-1.5 leading-normal ${
+                          log.type === 'success' ? 'text-emerald-600' : log.type === 'warning' ? 'text-amber-600' : 'text-slate-400'
+                        }`}>
+                          <span className="text-slate-300">[{log.time}]</span>
+                          <span className="font-semibold">{log.msg}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-slate-300 block italic">尚無連線行為記錄。</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </footer>
+
+          </div>
+
+          <p class="mt-12 text-center text-[11px] text-slate-400/80 font-medium">
+            © 2026 辦公室下午茶揪團委員會 ☕️ Styled dynamically with Clean Utility / Minimal Theme
+          </p>
+
+          {/* Prompt banner toast */}
+          {toast.show && (
+            <div className="fixed bottom-5 right-5 z-50">
+              <div className={`p-4 rounded-xl border shadow-fancy flex items-center gap-2.5 px-5 max-w-sm text-left ${
+                toast.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' :
+                toast.type === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-800' :
+                'bg-blue-50 border-blue-100 text-blue-800'
+              }`}>
+                <span className="text-lg">
+                  {toast.type === 'success' ? '✅' : toast.type === 'warning' ? '⚠️' : 'ℹ️'}
+                </span>
+                <div>
+                  <p className="text-xs font-bold leading-normal">{toast.message}</p>
+                </div>
+                <button 
+                  onClick={handleCloseToast} 
+                  className="ml-auto text-slate-400 hover:text-slate-700 text-sm font-bold pl-2 cursor-pointer select-none"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    // Initialize root mounting
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
